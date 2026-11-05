@@ -15,8 +15,8 @@
 #include "LangUtils.h"
 #include "OpenCallback.h"
 // **************** NanaZip Modification Start ****************
-#include "../../../Common/PropVariant.h"
 #include "../../../Common/StringConvert.h"
+#include "../../../Windows/PropVariant.h"
 #include "../../PropID.h"
 #include "PasswordStore.h"
 // **************** NanaZip Modification End ****************

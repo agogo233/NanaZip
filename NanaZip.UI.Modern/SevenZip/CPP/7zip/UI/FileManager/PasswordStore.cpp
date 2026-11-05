@@ -21,6 +21,8 @@
 #pragma comment(lib, "bcrypt.lib")
 #pragma comment(lib, "Crypt32.lib")
 
+using namespace NWindows;
+
 namespace NPasswordStore {
 
 static const Byte kMagic[8] = { 'N', 'Z', 'P', 'S', '0', '0', '0', '1' };
@@ -657,7 +659,7 @@ bool AddPassword(const UString &password)
       g_passwords.Delete(i);
   g_passwords.Insert(0, password);
   if (g_passwords.Size() > kMaxPasswords)
-    g_passwords.Delete(kMaxPasswords, g_passwords.Size() - kMaxPasswords);
+    g_passwords.DeleteFrom(kMaxPasswords);
   return SaveCacheToStore();
 }
 

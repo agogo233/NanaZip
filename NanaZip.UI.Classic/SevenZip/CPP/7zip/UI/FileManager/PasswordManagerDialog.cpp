@@ -60,7 +60,7 @@ bool CPasswordManagerDialog::OnInit()
 {
   if (!EnsureUnlocked())
   {
-    EndDialog(IDCANCEL);
+    End(IDCANCEL);
     return false;
   }
 
@@ -153,7 +153,7 @@ bool CPasswordManagerDialog::OnButtonClicked(int buttonID, HWND buttonHWND)
   if (buttonID == IDB_PM_LOCK)
   {
     NPasswordStore::Lock();
-    EndDialog(IDOK);
+    End(IDOK);
     return true;
   }
   return CDialog::OnButtonClicked(buttonID, buttonHWND);
