@@ -650,25 +650,30 @@ namespace winrt::NanaZip::Modern::implementation
             }
         }
 
-        if (!this->m_StoreContext)
-        {
-            this->m_StoreContext = winrt::StoreContext::GetDefault();
-        }
+        // Disabled: the Microsoft Store Licensing API network query for the
+        // Sponsor Edition addon licensing status. It only decides which
+        // label the sponsor button shows. With it disabled, no background
+        // network access will happen and the button always shows the
+        // acquire label.
+        //if (!this->m_StoreContext)
+        //{
+        //    this->m_StoreContext = winrt::StoreContext::GetDefault();
+        //}
 
         bool Sponsored = false;
 
-        if (this->m_StoreContext)
-        {
-            winrt::StoreProductQueryResult ProductQueryResult =
-                this->m_StoreContext.GetStoreProductsAsync(
-                    { L"Durable" },
-                    { L"9N9DNPT6D6Z9" }).get();
-            for (auto Item : ProductQueryResult.Products())
-            {
-                winrt::StoreProduct Product = Item.Value();
-                Sponsored = Product.IsInUserCollection();
-            }
-        }
+        //if (this->m_StoreContext)
+        //{
+        //    winrt::StoreProductQueryResult ProductQueryResult =
+        //        this->m_StoreContext.GetStoreProductsAsync(
+        //            { L"Durable" },
+        //            { L"9N9DNPT6D6Z9" }).get();
+        //    for (auto Item : ProductQueryResult.Products())
+        //    {
+        //        winrt::StoreProduct Product = Item.Value();
+        //        Sponsored = Product.IsInUserCollection();
+        //    }
+        //}
 
         {
             DWORD Data = Sponsored;
