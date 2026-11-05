@@ -124,7 +124,7 @@
       <BinaryFile Include="NanaZip.Universal.Windows.exe" Symbol="true" />
       <BinaryFile Include="Mile.Xaml.Styles.SunValley.xbf" />
       <BinaryFile Include="resources.pri" />
-      <SymbolFile Include="NanaZip.Modern.FileManager.pdb" />
+      <BinaryFile Include="NanaZip.Modern.FileManager.exe" Symbol="NanaZip.Modern.FileManager.pdb" />
       <SymbolFile Include="NanaZip.ShellExtension.pdb" />
     </ItemGroup>
     <ItemGroup Condition="'$(NanaZipBuildWithSanitizers)' == 'true'">
