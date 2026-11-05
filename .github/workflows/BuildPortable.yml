@@ -40,8 +40,10 @@ jobs:
         run: MSBuild -m -t:Build -p:Configuration=Release -p:Platform=x64 -p:PreferredToolArchitecture=x64 NanaZipPackage\NanaZipPackage.wapproj
       - name: Package portable binaries
         run: MSBuild -t:Packaging -p:NanaZipPackagingArchitectures=x64 BuildAllTargets.proj
+      - name: Restore extension package installer
+        run: MSBuild -t:Restore -p:Configuration=Release NanaZip.ExtensionPackage\NanaZip.ExtensionPackage.Installer.proj
       - name: Build extension package installer
-        run: MSBuild -m -p:Configuration=Release NanaZip.ExtensionPackage\NanaZip.ExtensionPackage.Installer.proj
+        run: MSBuild -t:Build -p:Configuration=Release NanaZip.ExtensionPackage\NanaZip.ExtensionPackage.Installer.proj
       - name: Collect portable zip
         shell: pwsh
         run: |
