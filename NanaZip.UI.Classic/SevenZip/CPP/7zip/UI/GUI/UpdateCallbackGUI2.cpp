@@ -55,5 +55,9 @@ HRESULT CUpdateCallbackGUI2::ShowAskPasswordDialog()
     return E_ABORT;
   Password = dialog.Password;
   PasswordIsDefined = true;
+  // **************** NanaZip Modification Start ****************
+  if (dialog.Remember)
+    NPasswordUI::RememberPasswordToStore(*ProgressDialog, dialog.Password);
+  // **************** NanaZip Modification End ****************
   return S_OK;
 }

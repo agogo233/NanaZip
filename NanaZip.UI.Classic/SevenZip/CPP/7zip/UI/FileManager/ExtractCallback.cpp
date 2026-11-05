@@ -676,6 +676,10 @@ STDMETHODIMP CExtractCallbackImp::CryptoGetTextPassword(BSTR *password)
     #ifndef _SFX
     if (dialog.ShowPassword != showPassword)
       NExtract::Save_ShowPassword(dialog.ShowPassword);
+    // **************** NanaZip Modification Start ****************
+    if (dialog.Remember)
+      NPasswordUI::RememberPasswordToStore(*ProgressDialog, dialog.Password);
+    // **************** NanaZip Modification End ****************
     #endif
   }
   return StringToBstr(Password, password);

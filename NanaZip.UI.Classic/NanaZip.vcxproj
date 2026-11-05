@@ -214,6 +214,9 @@
     <ClCompile Include="SevenZip\CPP\7zip\UI\FileManager\PanelSort.cpp" />
     <ClCompile Include="SevenZip\CPP\7zip\UI\FileManager\PanelSplitFile.cpp" />
     <ClCompile Include="SevenZip\CPP\7zip\UI\FileManager\PasswordDialog.cpp" />
+    <ClCompile Include="SevenZip\CPP\7zip\UI\FileManager\PasswordManagerDialog.cpp" />
+    <ClCompile Include="SevenZip\CPP\7zip\UI\FileManager\PasswordMasterDialog.cpp" />
+    <ClCompile Include="SevenZip\CPP\7zip\UI\FileManager\PasswordStore.cpp" />
     <ClCompile Include="SevenZip\CPP\7zip\UI\FileManager\ProgressDialog2.cpp" />
     <ClCompile Include="SevenZip\CPP\7zip\UI\FileManager\PropertyName.cpp" />
     <ClCompile Include="SevenZip\CPP\7zip\UI\FileManager\RegistryAssociations.cpp" />
@@ -385,6 +388,9 @@
     <ClInclude Include="SevenZip\CPP\7zip\UI\FileManager\OverwriteDialog.h" />
     <ClInclude Include="SevenZip\CPP\7zip\UI\FileManager\Panel.h" />
     <ClInclude Include="SevenZip\CPP\7zip\UI\FileManager\PasswordDialog.h" />
+    <ClInclude Include="SevenZip\CPP\7zip\UI\FileManager\PasswordManagerDialog.h" />
+    <ClInclude Include="SevenZip\CPP\7zip\UI\FileManager\PasswordMasterDialog.h" />
+    <ClInclude Include="SevenZip\CPP\7zip\UI\FileManager\PasswordStore.h" />
     <ClInclude Include="SevenZip\CPP\7zip\UI\FileManager\PluginInterface.h" />
     <ClInclude Include="SevenZip\CPP\7zip\UI\FileManager\PluginLoader.h" />
     <ClInclude Include="SevenZip\CPP\7zip\UI\FileManager\ProgressDialog2.h" />

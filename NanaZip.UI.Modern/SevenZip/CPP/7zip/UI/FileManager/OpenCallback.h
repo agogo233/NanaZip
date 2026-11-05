@@ -35,6 +35,16 @@ class COpenArchiveCallback:
 public:
   bool PasswordIsDefined;
   bool PasswordWasAsked;
+  // **************** NanaZip Modification Start ****************
+  // Set when a volume file required for opening is missing. The auto
+  // retry loop in FileFolderPluginOpen uses it to stop trying further
+  // saved passwords (multi-volume archive is incomplete).
+  bool VolumeMissing;
+  // Set when the auto retry loop already tried all saved passwords and
+  // is falling back to the manual dialog: the password dialog must not
+  // prefill the known-failed saved password.
+  bool NoPrefill;
+  // **************** NanaZip Modification End ****************
   UString Password;
   HWND ParentWindow;
   CProgressDialog ProgressDialog;
@@ -66,6 +76,10 @@ public:
     _subArchiveMode = false;
     PasswordIsDefined = false;
     PasswordWasAsked = false;
+    // **************** NanaZip Modification Start ****************
+    VolumeMissing = false;
+    NoPrefill = false;
+    // **************** NanaZip Modification End ****************
   }
   /*
   void Init()

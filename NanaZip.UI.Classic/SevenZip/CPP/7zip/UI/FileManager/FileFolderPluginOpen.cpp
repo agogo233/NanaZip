@@ -14,6 +14,12 @@
 #include "FormatUtils.h"
 #include "LangUtils.h"
 #include "OpenCallback.h"
+// **************** NanaZip Modification Start ****************
+#include "../../../Common/PropVariant.h"
+#include "../../../Common/StringConvert.h"
+#include "../../PropID.h"
+#include "PasswordStore.h"
+// **************** NanaZip Modification End ****************
 #include "PluginLoader.h"
 #include "PropertyName.h"
 #include "RegistryPlugins.h"
@@ -59,6 +65,114 @@ static int FindPlugin(const CObjectVector<CPluginInfo> &plugins, const UString &
 }
 */
 
+// **************** NanaZip Modification Start ****************
+
+// Minimal silent extract callback used to verify saved passwords on
+// archives whose header is not encrypted (e.g. zip): the engine rejects a
+// wrong password at the stream header, so a single-item test is cheap.
+struct CPasswordTestCallback:
+  public IArchiveExtractCallback,
+  public ICryptoGetTextPassword,
+  public CMyUnknownImp
+{
+  UString Password;
+  Int32 TestResult;
+
+  CPasswordTestCallback(): TestResult(0) {}
+
+  MY_UNKNOWN_IMP2(
+      IArchiveExtractCallback,
+      ICryptoGetTextPassword)
+
+  STDMETHOD(SetTotal)(UInt64 /* total */) { return S_OK; }
+  STDMETHOD(SetCompleted)(const UInt64 * /* completeValue */) { return S_OK; }
+  STDMETHOD(GetStream)(UInt32 /* index */, ISequentialOutStream **outStream, Int32 /* askExtractMode */)
+  {
+    *outStream = NULL;
+    return S_OK;
+  }
+  STDMETHOD(PrepareOperation)(Int32 /* askExtractMode */) { return S_OK; }
+  STDMETHOD(SetOperationResult)(Int32 resultEOperationResult)
+  {
+    TestResult = resultEOperationResult;
+    return S_OK;
+  }
+  STDMETHOD(CryptoGetTextPassword)(BSTR *password)
+  {
+    return StringToBstr(Password, password);
+  }
+};
+
+// Runs a single-item test extraction with each saved password (MRU order).
+// On success sets foundPassword and returns true.
+static bool TestSavedPasswords(
+    IFolderFolder *folder,
+    const UStringVector &savedPasswords,
+    UString &foundPassword)
+{
+  CMyComPtr<IArchiveFolderInternal> afi;
+  if (!folder || folder->QueryInterface(IID_IArchiveFolderInternal, (void **)&afi) != S_OK || !afi)
+    return false;
+  CAgentFolder *agentFolder = NULL;
+  if (afi->GetAgentFolder(&agentFolder) != S_OK || !agentFolder)
+    return false;
+  IInArchive *archive = agentFolder->_agentSpec->GetArchive();
+  if (!archive)
+    return false;
+
+  UInt32 numItems = 0;
+  if (archive->GetNumberOfItems(&numItems) != S_OK || numItems == 0)
+    return false;
+
+  // Find the smallest encrypted item to keep the test cheap.
+  // Skip directories: testing a folder item never completes the stream
+  // callback, so such a test cannot validate the password.
+  UInt64 bestSize = (UInt64)(Int64)-1;
+  int bestIndex = -1;
+  bool hasEncrypted = false;
+  for (UInt32 k = 0; k < numItems; k++)
+  {
+    NCOM::CPropVariant prop;
+    if (archive->GetProperty(k, kpidIsDir, &prop) != S_OK || prop.vt != VT_BOOL)
+      continue;
+    if (prop.boolVal)
+      continue;
+    if (archive->GetProperty(k, kpidEncrypted, &prop) != S_OK || prop.vt != VT_BOOL)
+      continue;
+    if (!prop.boolVal)
+      continue;
+    hasEncrypted = true;
+    if (archive->GetProperty(k, kpidSize, &prop) != S_OK || prop.vt != VT_UI8)
+      continue;
+    if (prop.uhVal.QuadPart < bestSize)
+    {
+      bestSize = prop.uhVal.QuadPart;
+      bestIndex = (int)k;
+    }
+  }
+  if (!hasEncrypted || bestIndex < 0)
+    return false;
+
+  const UInt32 index = (UInt32)bestIndex;
+  for (unsigned s = 0; s < savedPasswords.Size(); s++)
+  {
+    CPasswordTestCallback *callback = new CPasswordTestCallback;
+    CMyComPtr<IArchiveExtractCallback> cb = callback;
+    callback->Password = savedPasswords[s];
+    callback->TestResult = -1;
+    const HRESULT result = archive->Extract(&index, 1, 1 /* test mode */, cb);
+    if (result == S_OK && callback->TestResult == 0 /* NOperationResult::kOK */)
+    {
+      foundPassword = savedPasswords[s];
+      return true;
+    }
+  }
+  return false;
+}
+
+// **************** NanaZip Modification End ****************
+
+
 static void SplitNameToPureNameAndExtension(const FString &fullName,
     FString &pureName, FString &extensionDelimiter, FString &extension)
 {
@@ -67,8 +181,7 @@ static void SplitNameToPureNameAndExtension(const FString &fullName,
   {
     pureName = fullName;
     extensionDelimiter.Empty();
-    extension.Empty();
-  }
+    extension.Empty();  }
   else
   {
     pureName.SetFrom(fullName, index);
@@ -280,17 +393,45 @@ HRESULT CFfpOpen::OpenFileFolderPlugin(IInStream *inStream,
       continue;
     CPluginLibrary library;
 
+    CMyComPtr<IFolderManager> manager;
+    if (plugin.FilePath.IsEmpty())
+      manager = new CArchiveFolderManager;
+    else if (library.LoadAndCreateManager(plugin.FilePath, plugin.ClassID, &manager) != S_OK)
+      continue;
+
+    // **************** NanaZip Modification Start ****************
+    // Auto try the saved passwords before falling back to the manual
+    // password dialog.
+    UStringVector savedPasswords;
+    bool autoTry = !Encrypted && Password.IsEmpty()
+        && NPasswordStore::GetPasswords(savedPasswords)
+        && !savedPasswords.IsEmpty();
+    unsigned savedIndex = 0;
+    bool manualRetryPending = false;
+    // **************** NanaZip Modification End ****************
+
+    for (;;)
+    {
     CThreadArchiveOpen t;
 
-    if (plugin.FilePath.IsEmpty())
-      t.FolderManager = new CArchiveFolderManager;
-    else if (library.LoadAndCreateManager(plugin.FilePath, plugin.ClassID, &t.FolderManager) != S_OK)
-      continue;
+    t.FolderManager = manager;
 
     t.OpenCallbackSpec = new COpenArchiveCallback;
     t.OpenCallback = t.OpenCallbackSpec;
-    t.OpenCallbackSpec->PasswordIsDefined = Encrypted;
-    t.OpenCallbackSpec->Password = Password;
+    // **************** NanaZip Modification Start ****************
+    bool autoAttempt = false;
+    if (autoTry && savedIndex < savedPasswords.Size())
+    {
+      t.OpenCallbackSpec->PasswordIsDefined = true;
+      t.OpenCallbackSpec->Password = savedPasswords[savedIndex];
+      autoAttempt = true;
+    }
+    else
+    {
+      t.OpenCallbackSpec->PasswordIsDefined = Encrypted;
+      t.OpenCallbackSpec->Password = Password;
+    }
+    // **************** NanaZip Modification End ****************
     t.OpenCallbackSpec->ParentWindow = parentWindow;
 
     if (inStream)
@@ -319,6 +460,33 @@ HRESULT CFfpOpen::OpenFileFolderPlugin(IInStream *inStream,
       t.OpenCallbackSpec->StartProgressDialog(progressTitle, thread);
     }
 
+    // **************** NanaZip Modification Start ****************
+    if (autoAttempt && t.Result != S_OK)
+    {
+      const bool passwordRelated =
+          t.OpenCallbackSpec->PasswordWasAsked && t.Result != E_ABORT;
+      const bool volumeMissing = t.OpenCallbackSpec->VolumeMissing;
+      if (passwordRelated && !volumeMissing)
+      {
+        if (savedIndex + 1 < savedPasswords.Size())
+        {
+          savedIndex++;
+          continue;
+        }
+        if (!manualRetryPending)
+        {
+          // All saved passwords failed: retry once with the manual dialog.
+          manualRetryPending = true;
+          savedIndex = savedPasswords.Size();
+          Encrypted = false;
+          Password.Empty();
+          t.OpenCallbackSpec->NoPrefill = true;
+          continue;
+        }
+      }
+    }
+    // **************** NanaZip Modification End ****************
+
     if (t.Result != S_FALSE && t.Result != S_OK)
       return t.Result;
 
@@ -338,6 +506,13 @@ HRESULT CFfpOpen::OpenFileFolderPlugin(IInStream *inStream,
     }
 
     // if (openCallbackSpec->PasswordWasAsked)
+    // **************** NanaZip Modification Start ****************
+    // In the auto attempt mode the password was pre-set for the engine, so
+    // PasswordIsDefined does not reflect a real user input. Only sync the
+    // state when the engine actually asked for the password (the header
+    // is encrypted and the attempt really used the password).
+    if (!autoAttempt || t.OpenCallbackSpec->PasswordWasAsked)
+    // **************** NanaZip Modification End ****************
     {
       Encrypted = t.OpenCallbackSpec->PasswordIsDefined;
       Password = t.OpenCallbackSpec->Password;
@@ -350,7 +525,24 @@ HRESULT CFfpOpen::OpenFileFolderPlugin(IInStream *inStream,
       Folder = t.Folder;
     }
 
+    // **************** NanaZip Modification Start ****************
+    // The archive opened without a password prompt. If it still contains
+    // encrypted items (e.g. a zip with an unencrypted header), verify the
+    // saved passwords with a silent single-item test so that later
+    // extraction of that archive works without a password prompt.
+    if (t.Result == S_OK && !Encrypted && !savedPasswords.IsEmpty())
+    {
+      UString foundPassword;
+      if (TestSavedPasswords(t.Folder, savedPasswords, foundPassword))
+      {
+        Password = foundPassword;
+        Encrypted = true;
+      }
+    }
+    // **************** NanaZip Modification End ****************
+
     return t.Result;
+    }
   }
 
   return S_FALSE;

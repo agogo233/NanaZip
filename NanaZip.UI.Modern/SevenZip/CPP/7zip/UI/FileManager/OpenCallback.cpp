@@ -93,7 +93,12 @@ STDMETHODIMP COpenArchiveCallback::GetStream(const wchar_t *name, IInStream **in
   if (!NFile::NName::GetFullPath(_folderPrefix, us2fs(name), fullPath))
     return S_FALSE;
   if (!_fileInfo.Find_FollowLink(fullPath))
+  {
+    // **************** NanaZip Modification Start ****************
+    VolumeMissing = true;
+    // **************** NanaZip Modification End ****************
     return S_FALSE;
+  }
   if (_fileInfo.IsDir())
     return S_FALSE;
   CInFileStream *inFile = new CInFileStream;
@@ -114,6 +119,9 @@ STDMETHODIMP COpenArchiveCallback::CryptoGetTextPassword(BSTR *password)
     CPasswordDialog dialog;
     bool showPassword = NExtract::Read_ShowPassword();
     dialog.ShowPassword = showPassword;
+    // **************** NanaZip Modification Start ****************
+    dialog.NoPrefill = NoPrefill;
+    // **************** NanaZip Modification End ****************
    
     ProgressDialog.WaitCreating();
     if (dialog.Create(ProgressDialog) != IDOK)
@@ -123,6 +131,10 @@ STDMETHODIMP COpenArchiveCallback::CryptoGetTextPassword(BSTR *password)
     PasswordIsDefined = true;
     if (dialog.ShowPassword != showPassword)
       NExtract::Save_ShowPassword(dialog.ShowPassword);
+    // **************** NanaZip Modification Start ****************
+    if (dialog.Remember)
+      NPasswordUI::RememberPasswordToStore(ProgressDialog, dialog.Password);
+    // **************** NanaZip Modification End ****************
   }
   return StringToBstr(Password, password);
   COM_TRY_END
