@@ -1,0 +1,56 @@
+name: Build Portable x64
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'Documents/**'
+      - '**/*.md'
+  pull_request:
+    paths-ignore:
+      - 'Documents/**'
+      - '**/*.md'
+
+concurrency:
+  group: build-portable
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      POWERSHELL_TELEMETRY_OPTOUT: 1
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          submodules: 'recursive'
+      - uses: microsoft/setup-msbuild@v3
+      - name: Clear local NuGet cache (workaround for failed restores on windows-latest)
+        run: dotnet nuget locals all --clear
+      - name: Refresh version
+        run: MSBuild -t:RefreshVersion BuildAllTargets.proj
+      - name: Restore
+        run: MSBuild -m -t:Restore -p:Configuration=Release -p:Platform=x64 -p:PreferredToolArchitecture=x64 NanaZipPackage\NanaZipPackage.wapproj
+      - name: Build portable x64
+        run: MSBuild -m -t:Build -p:Configuration=Release -p:Platform=x64 -p:PreferredToolArchitecture=x64 NanaZipPackage\NanaZipPackage.wapproj
+      - name: Package portable binaries
+        run: MSBuild -t:Packaging -p:NanaZipPackagingArchitectures=x64 BuildAllTargets.proj
+      - name: Build extension package installer
+        run: MSBuild -m -p:Configuration=Release NanaZip.ExtensionPackage\NanaZip.ExtensionPackage.Installer.proj
+      - name: Collect portable zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path .\Output\Binaries\Root\Binaries\x64\* -DestinationPath .\NanaZip_x64_portable.zip -CompressionLevel Optimal -Force
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: NanaZip_x64_portable
+          path: NanaZip_x64_portable.zip
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: NanaZip_ExtensionPackage_Installer
+          path: Output/NanaZip.ExtensionPackage_*.exe
