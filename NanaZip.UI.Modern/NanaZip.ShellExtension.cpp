@@ -14,6 +14,9 @@
 #pragma comment(lib, "Shlwapi.lib")
 
 #include <shobjidl_core.h>
+#include <shlobj_core.h>
+#include <map>
+#include <string>
 
 #include <winrt/Windows.Foundation.h>
 
@@ -1147,6 +1150,412 @@ namespace NanaZip::ShellExtension
 #pragma endregion
     };
 
+    struct NanaZipContextMenu : public winrt::implements<
+        NanaZipContextMenu, IContextMenu, IShellExtInit>
+    {
+    private:
+
+        winrt::com_ptr<IShellItemArray> m_shellItemArray;
+        std::map<UINT, DWORD> m_commands;
+
+        static bool GetNeedExtract(
+            IShellItemArray* ShellItemArray,
+            std::vector<std::wstring>& FilePaths)
+        {
+            if (!ShellItemArray)
+            {
+                return false;
+            }
+
+            DWORD Count = 0;
+            if (FAILED(ShellItemArray->GetCount(&Count)))
+            {
+                return false;
+            }
+
+            for (DWORD i = 0; i < Count; ++i)
+            {
+                winrt::com_ptr<IShellItem> Item;
+                if (SUCCEEDED(ShellItemArray->GetItemAt(i, Item.put())))
+                {
+                    LPWSTR DisplayName = nullptr;
+                    if (SUCCEEDED(Item->GetDisplayName(
+                        SIGDN_FILESYSPATH,
+                        &DisplayName)))
+                    {
+                        FilePaths.push_back(std::wstring(DisplayName));
+                        ::CoTaskMemFree(DisplayName);
+                    }
+                }
+            }
+
+            for (std::wstring const& FilePath : FilePaths)
+            {
+                DWORD FileAttributes = ::GetFileAttributesW(
+                    FilePath.c_str());
+                if (FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                {
+                    continue;
+                }
+
+                if (DoNeedExtract(::PathFindFileNameW(FilePath.c_str())))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        static UString GetCommandTitle(DWORD CommandID)
+        {
+            UString Text;
+            switch (CommandID)
+            {
+            case CommandID::Open:
+                LangString(IDS_CONTEXT_OPEN, Text);
+                break;
+            case CommandID::ExtractHere:
+                LangString(IDS_CONTEXT_EXTRACT_HERE, Text);
+                break;
+            case CommandID::ExtractTo:
+                LangString(IDS_CONTEXT_EXTRACT_TO, Text);
+                break;
+            case CommandID::CompressTo7z:
+                LangString(IDS_CONTEXT_COMPRESS_TO, Text);
+                Text += L" (.7z)";
+                break;
+            case CommandID::CompressToZip:
+                LangString(IDS_CONTEXT_COMPRESS_TO, Text);
+                Text += L" (.zip)";
+                break;
+            case CommandID::Test:
+                LangString(IDS_CONTEXT_TEST, Text);
+                break;
+            case CommandID::HashCRC32:
+                Text = L"CRC-32";
+                break;
+            case CommandID::HashCRC64:
+                Text = L"CRC-64";
+                break;
+            case CommandID::HashSHA1:
+                Text = L"SHA-1";
+                break;
+            case CommandID::HashSHA256:
+                Text = L"SHA-256";
+                break;
+            case CommandID::HashAll:
+                Text = L"*";
+                break;
+            default:
+                break;
+            }
+            return Text;
+        }
+
+    public:
+
+        HRESULT STDMETHODCALLTYPE QueryContextMenu(
+            _In_ HMENU hMenu,
+            _In_ UINT indexMenu,
+            _In_ UINT idCmdFirst,
+            _In_ UINT idCmdLast,
+            _In_ UINT uFlags) override
+        {
+            UNREFERENCED_PARAMETER(uFlags);
+
+            if (!hMenu)
+            {
+                return MAKE_HRESULT(SEVERITY_SUCCESS, 0, 0);
+            }
+
+            if (idCmdFirst > idCmdLast)
+            {
+                return E_INVALIDARG;
+            }
+
+            if (!this->m_shellItemArray)
+            {
+                return MAKE_HRESULT(SEVERITY_SUCCESS, 0, 0);
+            }
+
+            LoadLangOneTime();
+
+            CContextMenuInfo ContextMenuInfo;
+            ContextMenuInfo.Load();
+            DWORD ContextMenuFlags = ContextMenuInfo.Flags;
+
+            std::vector<std::wstring> FilePaths;
+            bool NeedExtract = GetNeedExtract(
+                this->m_shellItemArray.get(),
+                FilePaths);
+            if (FilePaths.empty())
+            {
+                return MAKE_HRESULT(SEVERITY_SUCCESS, 0, 0);
+            }
+
+            this->m_commands.clear();
+
+            HMENU SubMenu = ::CreatePopupMenu();
+            if (!SubMenu)
+            {
+                return E_OUTOFMEMORY;
+            }
+
+            UINT CurrentID = idCmdFirst;
+            bool HasItems = false;
+
+            auto AddCommand =
+                [&](DWORD CommandID, UString const& Text) -> void
+            {
+                if (CurrentID >= idCmdLast)
+                {
+                    return;
+                }
+                if (Text.Len() == 0)
+                {
+                    return;
+                }
+                ::AppendMenuW(
+                    SubMenu,
+                    MF_STRING,
+                    CurrentID,
+                    Text.Ptr());
+                this->m_commands[CurrentID] = CommandID;
+                ++CurrentID;
+                HasItems = true;
+            };
+
+            if ((ContextMenuFlags & NContextMenuFlags::kOpen) &&
+                NeedExtract &&
+                FilePaths.size() == 1)
+            {
+                AddCommand(
+                    CommandID::Open,
+                    GetCommandTitle(CommandID::Open));
+            }
+
+            if ((ContextMenuFlags & NContextMenuFlags::kExtractHere) &&
+                NeedExtract)
+            {
+                AddCommand(
+                    CommandID::ExtractHere,
+                    GetCommandTitle(CommandID::ExtractHere));
+            }
+
+            if ((ContextMenuFlags & NContextMenuFlags::kExtractTo) &&
+                NeedExtract)
+            {
+                AddCommand(
+                    CommandID::ExtractTo,
+                    GetCommandTitle(CommandID::ExtractTo));
+            }
+
+            if (ContextMenuFlags & NContextMenuFlags::kCompressTo7z)
+            {
+                AddCommand(
+                    CommandID::CompressTo7z,
+                    GetCommandTitle(CommandID::CompressTo7z));
+            }
+
+            if (ContextMenuFlags & NContextMenuFlags::kCompressToZip)
+            {
+                AddCommand(
+                    CommandID::CompressToZip,
+                    GetCommandTitle(CommandID::CompressToZip));
+            }
+
+            if ((ContextMenuFlags & NContextMenuFlags::kTest) &&
+                NeedExtract)
+            {
+                AddCommand(
+                    CommandID::Test,
+                    GetCommandTitle(CommandID::Test));
+            }
+
+            if (ContextMenuFlags & NContextMenuFlags::kCRC)
+            {
+                AddCommand(CommandID::HashCRC32, L"CRC-32");
+                AddCommand(CommandID::HashCRC64, L"CRC-64");
+                AddCommand(CommandID::HashSHA1, L"SHA-1");
+                AddCommand(CommandID::HashSHA256, L"SHA-256");
+                AddCommand(CommandID::HashAll, L"*");
+            }
+
+            if (!HasItems)
+            {
+                ::DestroyMenu(SubMenu);
+                return MAKE_HRESULT(SEVERITY_SUCCESS, 0, 0);
+            }
+
+            ::InsertMenuW(
+                hMenu,
+                indexMenu,
+                MF_POPUP,
+                reinterpret_cast<UINT_PTR>(SubMenu),
+                L"NanaZip Preview");
+
+            return MAKE_HRESULT(
+                SEVERITY_SUCCESS,
+                0,
+                static_cast<UINT>(this->m_commands.size()));
+        }
+
+        HRESULT STDMETHODCALLTYPE InvokeCommand(
+            _In_ LPCMINVOKECOMMANDINFO lpici) override
+        {
+            if (!lpici)
+            {
+                return E_INVALIDARG;
+            }
+
+            if (HIWORD(lpici->lpVerb))
+            {
+                return E_INVALIDARG;
+            }
+
+            UINT CommandID = LOWORD(lpici->lpVerb);
+            auto It = this->m_commands.find(CommandID);
+            if (It == this->m_commands.end())
+            {
+                return E_INVALIDARG;
+            }
+
+            try
+            {
+                return winrt::make<ExplorerCommandBase>(
+                    std::wstring(),
+                    It->second)->Invoke(
+                        this->m_shellItemArray.get(),
+                        nullptr);
+            }
+            catch (...)
+            {
+                return winrt::to_hresult();
+            }
+        }
+
+        HRESULT STDMETHODCALLTYPE GetCommandString(
+            _In_ UINT_PTR idCmd,
+            _In_ UINT uType,
+            _In_opt_ UINT* pReserved,
+            _Inout_opt_ LPSTR pszName,
+            _In_ UINT cchMax) override
+        {
+            UNREFERENCED_PARAMETER(pReserved);
+
+            auto It = this->m_commands.find(
+                static_cast<UINT>(idCmd));
+            if (It == this->m_commands.end())
+            {
+                return E_INVALIDARG;
+            }
+
+            UString Text = GetCommandTitle(It->second);
+            if (Text.Len() == 0)
+            {
+                return E_NOTIMPL;
+            }
+
+            if (uType == GCS_VERBW)
+            {
+                if (pszName && cchMax > 0)
+                {
+                    wcscpy_s(
+                        reinterpret_cast<wchar_t*>(pszName),
+                        cchMax,
+                        Text.Ptr());
+                    return S_OK;
+                }
+            }
+            else if (uType == GCS_VERBA)
+            {
+                if (pszName && cchMax > 0)
+                {
+                    std::string Ansi(Text.Len() + 1, '\0');
+                    int Converted = ::WideCharToMultiByte(
+                        CP_ACP,
+                        0,
+                        Text.Ptr(),
+                        static_cast<int>(Text.Len()),
+                        Ansi.data(),
+                        static_cast<int>(Text.Len() + 1),
+                        nullptr,
+                        nullptr);
+                    if (Converted >= 0 &&
+                        static_cast<UINT>(Converted) < cchMax)
+                    {
+                        strcpy_s(
+                            pszName,
+                            cchMax,
+                            Ansi.c_str());
+                        return S_OK;
+                    }
+                }
+            }
+
+            return E_NOTIMPL;
+        }
+
+        HRESULT STDMETHODCALLTYPE Initialize(
+            _In_opt_ PCIDLIST_ABSOLUTE pidlFolder,
+            _In_opt_ IDataObject* pdtobj,
+            _In_opt_ HKEY hkeyProgID) override
+        {
+            UNREFERENCED_PARAMETER(pidlFolder);
+            UNREFERENCED_PARAMETER(hkeyProgID);
+
+            if (!pdtobj)
+            {
+                return E_INVALIDARG;
+            }
+
+            return ::SHCreateShellItemArrayFromDataObject(
+                pdtobj,
+                IID_PPV_ARGS(this->m_shellItemArray.put()));
+        }
+    };
+
+    struct DECLSPEC_UUID("EBE9FFD4-AFB4-4395-916E-005D98E97082")
+        ClassFactoryContextMenu : public winrt::implements<
+        ClassFactoryContextMenu, IClassFactory>
+    {
+    public:
+
+        HRESULT STDMETHODCALLTYPE CreateInstance(
+            _In_opt_ IUnknown* pUnkOuter,
+            _In_ REFIID riid,
+            _COM_Outptr_ void** ppvObject) noexcept override
+        {
+            UNREFERENCED_PARAMETER(pUnkOuter);
+
+            try
+            {
+                return winrt::make<NanaZipContextMenu>()->QueryInterface(
+                    riid, ppvObject);
+            }
+            catch (...)
+            {
+                return winrt::to_hresult();
+            }
+        }
+
+        HRESULT STDMETHODCALLTYPE LockServer(
+            _In_ BOOL fLock) noexcept override
+        {
+            if (fLock)
+            {
+                ++winrt::get_module_lock();
+            }
+            else
+            {
+                --winrt::get_module_lock();
+            }
+
+            return S_OK;
+        }
+    };
+
     struct DECLSPEC_UUID("469D94E9-6AF4-4395-B396-99B1308F8CE5")
         ClassFactory : public winrt::implements<
         ClassFactory, IClassFactory>
@@ -1214,13 +1623,21 @@ EXTERN_C HRESULT STDAPICALLTYPE DllGetClassObject(
         return E_NOINTERFACE;
     }
 
-    if (rclsid != __uuidof(NanaZip::ShellExtension::ClassFactory))
+    if (rclsid != __uuidof(NanaZip::ShellExtension::ClassFactory) &&
+        rclsid != __uuidof(NanaZip::ShellExtension::ClassFactoryContextMenu))
     {
         return E_INVALIDARG;
     }
 
     try
     {
+        if (rclsid ==
+            __uuidof(NanaZip::ShellExtension::ClassFactoryContextMenu))
+        {
+            return winrt::make<
+                NanaZip::ShellExtension::ClassFactoryContextMenu>(
+                    )->QueryInterface(riid, ppv);
+        }
         return winrt::make<NanaZip::ShellExtension::ClassFactory>(
             )->QueryInterface(riid, ppv);
     }

@@ -45,6 +45,10 @@ Source: "..\Output\Binaries\Release\NanaZipPackage\x64\NanaZip.ShellExtension.dl
 Root: HKCU; Subkey: "Software\Classes\CLSID\{{469D94E9-6AF4-4395-B396-99B1308F8CE5}"; ValueType: string; ValueData: "NanaZip Shell Extension"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\CLSID\{{469D94E9-6AF4-4395-B396-99B1308F8CE5}\InprocServer32"; ValueType: string; ValueData: "{app}\NanaZip.ShellExtension.dll"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\CLSID\{{469D94E9-6AF4-4395-B396-99B1308F8CE5}\InprocServer32"; ValueType: string; ValueName: "ThreadingModel"; ValueData: "Apartment"; Flags: uninsdeletekey
+; Register the classic IContextMenu shell extension CLSID
+Root: HKCU; Subkey: "Software\Classes\CLSID\{{EBE9FFD4-AFB4-4395-916E-005D98E97082}"; ValueType: string; ValueData: "NanaZip Shell Extension"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\CLSID\{{EBE9FFD4-AFB4-4395-916E-005D98E97082}\InprocServer32"; ValueType: string; ValueData: "{app}\NanaZip.ShellExtension.dll"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\CLSID\{{EBE9FFD4-AFB4-4395-916E-005D98E97082}\InprocServer32"; ValueType: string; ValueName: "ThreadingModel"; ValueData: "Apartment"; Flags: uninsdeletekey
 
 ; Register the explorer context menu for files, directories and drives
 ; (mirrors the extension categories declared in NanaZipPackage\
@@ -52,16 +56,16 @@ Root: HKCU; Subkey: "Software\Classes\CLSID\{{469D94E9-6AF4-4395-B396-99B1308F8C
 ; directly on Windows 10, and under "Show more options" on Windows 11,
 ; because the modern Windows 11 menu requires package identity.
 Root: HKCU; Subkey: "Software\Classes\*\shell\NanaZip"; ValueType: string; ValueName: "MUIVerb"; ValueData: "NanaZip"; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\Classes\*\shell\NanaZip"; ValueType: none; ValueName: "NeverDefault"; Flags: uninsdeletevalue
-Root: HKCU; Subkey: "Software\Classes\*\shell\NanaZip"; ValueType: string; ValueName: "ExplorerCommandHandler"; ValueData: "{{469D94E9-6AF4-4395-B396-99B1308F8CE5}"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\*\shell\NanaZip"; ValueType: string; ValueName: "NeverDefault"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\*\shell\NanaZip\CLSID"; ValueType: string; ValueData: "{{EBE9FFD4-AFB4-4395-916E-005D98E97082}"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\*\shell\NanaZip"; ValueType: string; ValueName: "Icon"; ValueData: "{app}\NanaZip.Modern.FileManager.exe,0"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\Directory\shell\NanaZip"; ValueType: string; ValueName: "MUIVerb"; ValueData: "NanaZip"; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\Classes\Directory\shell\NanaZip"; ValueType: none; ValueName: "NeverDefault"; Flags: uninsdeletevalue
-Root: HKCU; Subkey: "Software\Classes\Directory\shell\NanaZip"; ValueType: string; ValueName: "ExplorerCommandHandler"; ValueData: "{{469D94E9-6AF4-4395-B396-99B1308F8CE5}"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\NanaZip"; ValueType: string; ValueName: "NeverDefault"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\NanaZip\CLSID"; ValueType: string; ValueData: "{{EBE9FFD4-AFB4-4395-916E-005D98E97082}"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\Directory\shell\NanaZip"; ValueType: string; ValueName: "Icon"; ValueData: "{app}\NanaZip.Modern.FileManager.exe,0"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\Drive\shell\NanaZip"; ValueType: string; ValueName: "MUIVerb"; ValueData: "NanaZip"; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\Classes\Drive\shell\NanaZip"; ValueType: none; ValueName: "NeverDefault"; Flags: uninsdeletevalue
-Root: HKCU; Subkey: "Software\Classes\Drive\shell\NanaZip"; ValueType: string; ValueName: "ExplorerCommandHandler"; ValueData: "{{469D94E9-6AF4-4395-B396-99B1308F8CE5}"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Drive\shell\NanaZip"; ValueType: string; ValueName: "NeverDefault"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\Drive\shell\NanaZip\CLSID"; ValueType: string; ValueData: "{{EBE9FFD4-AFB4-4395-916E-005D98E97082}"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\Drive\shell\NanaZip"; ValueType: string; ValueName: "Icon"; ValueData: "{app}\NanaZip.Modern.FileManager.exe,0"; Flags: uninsdeletekey
 
 ; Register the NanaZip archive ProgId (mirrors the uap3:FileTypeAssociation
