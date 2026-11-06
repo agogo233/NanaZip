@@ -16,7 +16,11 @@
 #include <shobjidl_core.h>
 #include <shlobj_core.h>
 #include <map>
+#include <new>
 #include <string>
+#include <vector>
+
+extern long g_DllRefCount;
 
 #include <winrt/Windows.Foundation.h>
 
@@ -1150,11 +1154,71 @@ namespace NanaZip::ShellExtension
 #pragma endregion
     };
 
-    struct NanaZipContextMenu : public winrt::implements<
-        NanaZipContextMenu, IContextMenu, IShellExtInit>
+    class NanaZipContextMenu final : public IContextMenu, public IShellExtInit
     {
+    public:
+
+        NanaZipContextMenu() : m_ref(1)
+        {
+            ::InterlockedIncrement(&::g_DllRefCount);
+        }
+
+        NanaZipContextMenu(NanaZipContextMenu const&) = delete;
+        NanaZipContextMenu& operator=(NanaZipContextMenu const&) = delete;
+
+        HRESULT STDMETHODCALLTYPE QueryInterface(
+            _In_ REFIID riid,
+            _COM_Outptr_ void** ppvObject) override
+        {
+            if (!ppvObject)
+            {
+                return E_POINTER;
+            }
+
+            *ppvObject = nullptr;
+
+            if (riid == IID_IUnknown || riid == IID_IContextMenu)
+            {
+                *ppvObject = static_cast<IContextMenu*>(this);
+            }
+            else if (riid == IID_IShellExtInit)
+            {
+                *ppvObject = static_cast<IShellExtInit*>(this);
+            }
+            else
+            {
+                return E_NOINTERFACE;
+            }
+
+            this->AddRef();
+            return S_OK;
+        }
+
+        ULONG STDMETHODCALLTYPE AddRef() override
+        {
+            return static_cast<ULONG>(::InterlockedIncrement(&this->m_ref));
+        }
+
+        ULONG STDMETHODCALLTYPE Release() override
+        {
+            ULONG RefCount = static_cast<ULONG>(
+                ::InterlockedDecrement(&this->m_ref));
+            if (!RefCount)
+            {
+                delete this;
+            }
+
+            return RefCount;
+        }
+
     private:
 
+        ~NanaZipContextMenu()
+        {
+            ::InterlockedDecrement(&::g_DllRefCount);
+        }
+
+        LONG m_ref;
         winrt::com_ptr<IShellItemArray> m_shellItemArray;
         std::map<UINT, DWORD> m_commands;
 
@@ -1321,7 +1385,7 @@ namespace NanaZip::ShellExtension
                     MF_STRING,
                     CurrentID,
                     Text.Ptr());
-                this->m_commands[CurrentID] = CommandID;
+                this->m_commands[CurrentID - idCmdFirst] = CommandID;
                 ++CurrentID;
                 HasItems = true;
             };
@@ -1516,44 +1580,99 @@ namespace NanaZip::ShellExtension
         }
     };
 
-    struct DECLSPEC_UUID("EBE9FFD4-AFB4-4395-916E-005D98E97082")
-        ClassFactoryContextMenu : public winrt::implements<
-        ClassFactoryContextMenu, IClassFactory>
+    class DECLSPEC_UUID("EBE9FFD4-AFB4-4395-916E-005D98E97082")
+        ClassFactoryContextMenu final : public IClassFactory
     {
     public:
+
+        ClassFactoryContextMenu() : m_ref(1)
+        {
+        }
+
+        ClassFactoryContextMenu(ClassFactoryContextMenu const&) = delete;
+        ClassFactoryContextMenu& operator=(
+            ClassFactoryContextMenu const&) = delete;
+
+        HRESULT STDMETHODCALLTYPE QueryInterface(
+            _In_ REFIID riid,
+            _COM_Outptr_ void** ppvObject) override
+        {
+            if (!ppvObject)
+            {
+                return E_POINTER;
+            }
+
+            *ppvObject = nullptr;
+
+            if (riid != IID_IUnknown && riid != IID_IClassFactory)
+            {
+                return E_NOINTERFACE;
+            }
+
+            *ppvObject = static_cast<IClassFactory*>(this);
+            this->AddRef();
+            return S_OK;
+        }
+
+        ULONG STDMETHODCALLTYPE AddRef() override
+        {
+            return static_cast<ULONG>(::InterlockedIncrement(&this->m_ref));
+        }
+
+        ULONG STDMETHODCALLTYPE Release() override
+        {
+            ULONG RefCount = static_cast<ULONG>(
+                ::InterlockedDecrement(&this->m_ref));
+            if (!RefCount)
+            {
+                delete this;
+            }
+
+            return RefCount;
+        }
 
         HRESULT STDMETHODCALLTYPE CreateInstance(
             _In_opt_ IUnknown* pUnkOuter,
             _In_ REFIID riid,
-            _COM_Outptr_ void** ppvObject) noexcept override
+            _COM_Outptr_ void** ppvObject) override
         {
-            UNREFERENCED_PARAMETER(pUnkOuter);
+            if (pUnkOuter)
+            {
+                return CLASS_E_NOAGGREGATION;
+            }
 
-            try
+            NanaZipContextMenu* Instance =
+                new (std::nothrow) NanaZipContextMenu();
+            if (!Instance)
             {
-                return winrt::make<NanaZipContextMenu>()->QueryInterface(
-                    riid, ppvObject);
+                return E_OUTOFMEMORY;
             }
-            catch (...)
-            {
-                return winrt::to_hresult();
-            }
+
+            HRESULT Result = Instance->QueryInterface(riid, ppvObject);
+            Instance->Release();
+            return Result;
         }
 
         HRESULT STDMETHODCALLTYPE LockServer(
-            _In_ BOOL fLock) noexcept override
+            _In_ BOOL fLock) override
         {
             if (fLock)
             {
-                ++winrt::get_module_lock();
+                ::InterlockedIncrement(&::g_DllRefCount);
             }
             else
             {
-                --winrt::get_module_lock();
+                ::InterlockedDecrement(&::g_DllRefCount);
             }
 
             return S_OK;
         }
+
+    private:
+
+        ~ClassFactoryContextMenu() = default;
+
+        LONG m_ref;
     };
 
     struct DECLSPEC_UUID("469D94E9-6AF4-4395-B396-99B1308F8CE5")
@@ -1599,7 +1718,7 @@ namespace NanaZip::ShellExtension
 
 EXTERN_C HRESULT STDAPICALLTYPE DllCanUnloadNow()
 {
-    if (winrt::get_module_lock())
+    if (winrt::get_module_lock() || ::g_DllRefCount)
     {
         return S_FALSE;
     }
@@ -1634,9 +1753,17 @@ EXTERN_C HRESULT STDAPICALLTYPE DllGetClassObject(
         if (rclsid ==
             __uuidof(NanaZip::ShellExtension::ClassFactoryContextMenu))
         {
-            return winrt::make<
-                NanaZip::ShellExtension::ClassFactoryContextMenu>(
-                    )->QueryInterface(riid, ppv);
+            NanaZip::ShellExtension::ClassFactoryContextMenu* Factory =
+                new (std::nothrow)
+                    NanaZip::ShellExtension::ClassFactoryContextMenu();
+            if (!Factory)
+            {
+                return E_OUTOFMEMORY;
+            }
+
+            HRESULT Result = Factory->QueryInterface(riid, ppv);
+            Factory->Release();
+            return Result;
         }
         return winrt::make<NanaZip::ShellExtension::ClassFactory>(
             )->QueryInterface(riid, ppv);
