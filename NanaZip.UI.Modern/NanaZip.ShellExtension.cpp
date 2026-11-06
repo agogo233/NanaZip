@@ -915,6 +915,7 @@ namespace NanaZip::ShellExtension
                         L"*",
                         CommandID::HashAll));
             }
+        }
 
         void PopulateDefaultCommands()
         {
