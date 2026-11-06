@@ -44,6 +44,26 @@ jobs:
         run: MSBuild -t:Restore -p:Configuration=Release NanaZip.ExtensionPackage\NanaZip.ExtensionPackage.Installer.proj
       - name: Build extension package installer
         run: MSBuild -t:Build -p:Configuration=Release NanaZip.ExtensionPackage\NanaZip.ExtensionPackage.Installer.proj
+      - name: Verify setup installer inputs
+        shell: pwsh
+        run: |
+          $files = @(
+            '.\Output\Binaries\Root\Binaries\x64\NanaZip.Modern.FileManager.exe',
+            '.\Output\Binaries\Root\Binaries\x64\NanaZip.Universal.Windows.exe',
+            '.\Output\Binaries\Root\Binaries\x64\NanaZip.Universal.Console.exe',
+            '.\Output\Binaries\Root\Binaries\x64\NanaZip.Modern.dll',
+            '.\Output\Binaries\Root\Binaries\x64\resources.pri',
+            '.\Output\Binaries\Root\Binaries\x64\Mile.Xaml.Styles.SunValley.xbf',
+            '.\Output\Binaries\Release\NanaZipPackage\x64\NanaZip.ShellExtension.dll'
+          )
+          foreach ($file in $files) {
+            if (-not (Test-Path $file)) { throw "Missing setup installer input: $file" }
+            Get-Item $file | Select-Object Name, Length
+          }
+      - name: Restore setup installer
+        run: MSBuild -t:Restore -p:Configuration=Release NanaZip.ExtensionPackage\NanaZipSetup.proj
+      - name: Build setup installer
+        run: MSBuild -t:Build -p:Configuration=Release NanaZip.ExtensionPackage\NanaZipSetup.proj
       - name: Collect portable zip
         shell: pwsh
         run: |
@@ -56,3 +76,7 @@ jobs:
         with:
           name: NanaZip_ExtensionPackage_Installer
           path: Output/NanaZip.ExtensionPackage_*.exe
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: NanaZipSetup_x64
+          path: Output/NanaZipSetup_*.exe
