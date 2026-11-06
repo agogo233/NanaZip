@@ -583,6 +583,7 @@ namespace NanaZip::ShellExtension
         bool m_Initialized = false;
         SubCommandList m_SubCommands;
         SubCommandListIterator m_CurrentSubCommand;
+        bool m_SelectionValid = false;
 
         void Initialize(
             _In_opt_ IShellItemArray* psiItemArray)
@@ -622,8 +623,10 @@ namespace NanaZip::ShellExtension
 
             if (FilePaths.empty())
             {
+                this->m_SelectionValid = false;
                 return;
             }
+            this->m_SelectionValid = true;
 
             UStringVector FileNames;
             for (std::wstring const FilePath : FilePaths)
@@ -912,6 +915,81 @@ namespace NanaZip::ShellExtension
                         L"*",
                         CommandID::HashAll));
             }
+
+        void PopulateDefaultCommands()
+        {
+            if (!this->m_SubCommands.empty())
+            {
+                return;
+            }
+
+            LoadLangOneTime();
+
+            if (this->m_ContextMenuFlags & NContextMenuFlags::kCompress)
+            {
+                UString TranslatedString;
+                LangString(IDS_CONTEXT_COMPRESS, TranslatedString);
+                this->m_SubCommands.push_back(
+                    winrt::make<ExplorerCommandBase>(
+                        std::wstring(
+                            TranslatedString.Ptr(),
+                            TranslatedString.Len()),
+                        CommandID::Compress));
+            }
+
+            if (this->m_ContextMenuFlags & NContextMenuFlags::kCompressEmail)
+            {
+                UString TranslatedString;
+                LangString(IDS_CONTEXT_COMPRESS_EMAIL, TranslatedString);
+                this->m_SubCommands.push_back(
+                    winrt::make<ExplorerCommandBase>(
+                        std::wstring(
+                            TranslatedString.Ptr(),
+                            TranslatedString.Len()),
+                        CommandID::CompressEmail));
+            }
+
+            if (this->m_ContextMenuFlags & NContextMenuFlags::kCRC)
+            {
+                if (!this->m_SubCommands.empty())
+                {
+                    this->m_SubCommands.push_back(
+                        winrt::make<ExplorerCommandBase>());
+                }
+
+                this->m_SubCommands.push_back(
+                    winrt::make<ExplorerCommandBase>(
+                        L"CRC-32",
+                        CommandID::HashCRC32));
+                this->m_SubCommands.push_back(
+                    winrt::make<ExplorerCommandBase>(
+                        L"CRC-64",
+                        CommandID::HashCRC64));
+                this->m_SubCommands.push_back(
+                    winrt::make<ExplorerCommandBase>(
+                        L"SHA-1",
+                        CommandID::HashSHA1));
+                this->m_SubCommands.push_back(
+                    winrt::make<ExplorerCommandBase>(
+                        L"SHA-256",
+                        CommandID::HashSHA256));
+                this->m_SubCommands.push_back(
+                    winrt::make<ExplorerCommandBase>(
+                        L"*",
+                        CommandID::HashAll));
+            }
+
+            if (this->m_SubCommands.empty())
+            {
+                UString TranslatedString;
+                LangString(IDS_CONTEXT_COMPRESS, TranslatedString);
+                this->m_SubCommands.push_back(
+                    winrt::make<ExplorerCommandBase>(
+                        std::wstring(
+                            TranslatedString.Ptr(),
+                            TranslatedString.Len()),
+                        CommandID::Compress));
+            }
         }
 
     public:
@@ -931,6 +1009,11 @@ namespace NanaZip::ShellExtension
             _Outptr_ LPWSTR* ppszName)
         {
             this->Initialize(psiItemArray);
+
+            if (this->m_SubCommands.empty() && !this->m_SelectionValid)
+            {
+                this->PopulateDefaultCommands();
+            }
 
             if (this->m_SubCommands.empty())
             {
