@@ -1574,9 +1574,101 @@ namespace NanaZip::ShellExtension
                 return E_INVALIDARG;
             }
 
-            return ::SHCreateShellItemArrayFromDataObject(
+            HRESULT Result = ::SHCreateShellItemArrayFromDataObject(
                 pdtobj,
                 IID_PPV_ARGS(this->m_shellItemArray.put()));
+            if (SUCCEEDED(Result))
+            {
+                return Result;
+            }
+
+            // Explorer's IDataObject may only expose CF_HDROP (7-Zip's
+            // GetFileNames uses DragQueryFile), so fall back to CF_HDROP
+            // when SHCreateShellItemArrayFromDataObject fails.
+            FORMATETC FormatEtc
+            {
+                CF_HDROP,
+                nullptr,
+                DVASPECT_CONTENT,
+                -1,
+                TYMED_HGLOBAL
+            };
+            STGMEDIUM StorageMedium{};
+            Result = pdtobj->GetData(&FormatEtc, &StorageMedium);
+            if (FAILED(Result) || !StorageMedium.hGlobal)
+            {
+                return Result;
+            }
+
+            HDROP Drop = static_cast<HDROP>(
+                ::GlobalLock(StorageMedium.hGlobal));
+            if (!Drop)
+            {
+                ::ReleaseStgMedium(&StorageMedium);
+                return E_FAIL;
+            }
+
+            UINT Count = ::DragQueryFileW(
+                Drop,
+                0xFFFFFFFF,
+                nullptr,
+                0);
+            std::vector<std::wstring> FilePaths;
+            FilePaths.reserve(Count);
+            for (UINT i = 0; i < Count; ++i)
+            {
+                UINT Length = ::DragQueryFileW(
+                    Drop,
+                    i,
+                    nullptr,
+                    0);
+                std::wstring FilePath(Length + 1, L'\0');
+                ::DragQueryFileW(
+                    Drop,
+                    i,
+                    FilePath.data(),
+                    Length + 1);
+                FilePath.resize(Length);
+                FilePaths.push_back(FilePath);
+            }
+            ::GlobalUnlock(StorageMedium.hGlobal);
+            ::ReleaseStgMedium(&StorageMedium);
+
+            if (FilePaths.empty())
+            {
+                return E_FAIL;
+            }
+
+            std::vector<IShellItem*> Items;
+            Items.reserve(FilePaths.size());
+            for (std::wstring const& FilePath : FilePaths)
+            {
+                IShellItem* Item = nullptr;
+                if (SUCCEEDED(::SHCreateItemFromParsingName(
+                    FilePath.c_str(),
+                    nullptr,
+                    IID_PPV_ARGS(&Item))))
+                {
+                    Items.push_back(Item);
+                }
+            }
+
+            if (Items.empty())
+            {
+                return E_FAIL;
+            }
+
+            Result = ::SHCreateShellItemArray(
+                static_cast<DWORD>(Items.size()),
+                Items.data(),
+                IID_PPV_ARGS(this->m_shellItemArray.put()));
+
+            for (IShellItem* Item : Items)
+            {
+                Item->Release();
+            }
+
+            return Result;
         }
     };
 
