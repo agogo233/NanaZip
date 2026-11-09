@@ -408,6 +408,7 @@ HRESULT CFfpOpen::OpenFileFolderPlugin(IInStream *inStream,
         && !savedPasswords.IsEmpty();
     unsigned savedIndex = 0;
     bool manualRetryPending = false;
+    bool manualNoPrefill = false;
     // **************** NanaZip Modification End ****************
 
     for (;;)
@@ -430,6 +431,7 @@ HRESULT CFfpOpen::OpenFileFolderPlugin(IInStream *inStream,
     {
       t.OpenCallbackSpec->PasswordIsDefined = Encrypted;
       t.OpenCallbackSpec->Password = Password;
+      t.OpenCallbackSpec->NoPrefill = manualNoPrefill;
     }
     // **************** NanaZip Modification End ****************
     t.OpenCallbackSpec->ParentWindow = parentWindow;
@@ -480,7 +482,7 @@ HRESULT CFfpOpen::OpenFileFolderPlugin(IInStream *inStream,
           savedIndex = savedPasswords.Size();
           Encrypted = false;
           Password.Empty();
-          t.OpenCallbackSpec->NoPrefill = true;
+          manualNoPrefill = true;
           continue;
         }
       }
