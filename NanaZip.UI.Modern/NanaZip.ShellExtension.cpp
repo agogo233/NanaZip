@@ -1662,7 +1662,7 @@ namespace NanaZip::ShellExtension
 
             Result = ::SHCreateShellItemArrayFromIDLists(
                 static_cast<UINT>(Pidls.size()),
-                reinterpret_cast<LPCITEMIDLIST*>(Pidls.data()),
+                const_cast<LPCITEMIDLIST*>(Pidls.data()),
                 this->m_shellItemArray.put());
 
             for (PIDLIST_ABSOLUTE Pidl : Pidls)
