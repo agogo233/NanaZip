@@ -1639,33 +1639,17 @@ namespace NanaZip::ShellExtension
                 return E_FAIL;
             }
 
-            std::vector<IShellItem*> Items;
-            Items.reserve(FilePaths.size());
+            std::vector<PIDLIST_ABSOLUTE> Pidls;
+            Pidls.reserve(FilePaths.size());
             for (std::wstring const& FilePath : FilePaths)
             {
-                IShellItem* Item = nullptr;
-                if (SUCCEEDED(::SHCreateItemFromParsingName(
+                PIDLIST_ABSOLUTE Pidl = nullptr;
+                if (SUCCEEDED(::SHParseDisplayName(
                     FilePath.c_str(),
                     nullptr,
-                    IID_PPV_ARGS(&Item))))
-                {
-                    Items.push_back(Item);
-                }
-            }
-
-            if (Items.empty())
-            {
-                return E_FAIL;
-            }
-
-            std::vector<PIDLIST_ABSOLUTE> Pidls;
-            Pidls.reserve(Items.size());
-            for (IShellItem* Item : Items)
-            {
-                PIDLIST_ABSOLUTE Pidl = nullptr;
-                if (SUCCEEDED(Item->GetIDList(
-                    SIGDN_DESKTOPABSOLUTE,
-                    &Pidl)))
+                    &Pidl,
+                    0,
+                    nullptr)))
                 {
                     Pidls.push_back(Pidl);
                 }
@@ -1673,25 +1657,17 @@ namespace NanaZip::ShellExtension
 
             if (Pidls.empty())
             {
-                for (IShellItem* Item : Items)
-                {
-                    Item->Release();
-                }
                 return E_FAIL;
             }
 
             Result = ::SHCreateShellItemArrayFromIDLists(
                 static_cast<UINT>(Pidls.size()),
-                const_cast<PCIDLIST_ABSOLUTE const*>(Pidls.data()),
+                reinterpret_cast<LPCITEMIDLIST*>(Pidls.data()),
                 this->m_shellItemArray.put());
 
             for (PIDLIST_ABSOLUTE Pidl : Pidls)
             {
                 ::CoTaskMemFree(Pidl);
-            }
-            for (IShellItem* Item : Items)
-            {
-                Item->Release();
             }
 
             return Result;
