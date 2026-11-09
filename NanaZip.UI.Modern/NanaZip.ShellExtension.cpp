@@ -1658,11 +1658,37 @@ namespace NanaZip::ShellExtension
                 return E_FAIL;
             }
 
-            Result = ::SHCreateShellItemArray(
-                static_cast<DWORD>(Items.size()),
-                Items.data(),
-                IID_PPV_ARGS(this->m_shellItemArray.put()));
+            std::vector<PIDLIST_ABSOLUTE> Pidls;
+            Pidls.reserve(Items.size());
+            for (IShellItem* Item : Items)
+            {
+                PIDLIST_ABSOLUTE Pidl = nullptr;
+                if (SUCCEEDED(Item->GetIDList(
+                    SIGDN_DESKTOPABSOLUTE,
+                    &Pidl)))
+                {
+                    Pidls.push_back(Pidl);
+                }
+            }
 
+            if (Pidls.empty())
+            {
+                for (IShellItem* Item : Items)
+                {
+                    Item->Release();
+                }
+                return E_FAIL;
+            }
+
+            Result = ::SHCreateShellItemArrayFromIDLists(
+                static_cast<UINT>(Pidls.size()),
+                const_cast<PCIDLIST_ABSOLUTE const*>(Pidls.data()),
+                this->m_shellItemArray.put());
+
+            for (PIDLIST_ABSOLUTE Pidl : Pidls)
+            {
+                ::CoTaskMemFree(Pidl);
+            }
             for (IShellItem* Item : Items)
             {
                 Item->Release();
