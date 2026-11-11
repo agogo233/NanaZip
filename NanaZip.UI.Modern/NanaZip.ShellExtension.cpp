@@ -1457,7 +1457,7 @@ namespace NanaZip::ShellExtension
                 indexMenu,
                 MF_POPUP,
                 reinterpret_cast<UINT_PTR>(SubMenu),
-                L"NanaZip Preview");
+                L"NanaZip");
 
             return MAKE_HRESULT(
                 SEVERITY_SUCCESS,
