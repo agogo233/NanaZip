@@ -18,6 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
+  actions: write
   contents: read
 
 jobs:
@@ -26,6 +27,13 @@ jobs:
     env:
       POWERSHELL_TELEMETRY_OPTOUT: 1
     steps:
+      - name: Delete old workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 7
+          keep_minimum_runs: 3
       - uses: actions/checkout@v7.0.1
         with:
           submodules: 'recursive'
@@ -70,13 +78,16 @@ jobs:
           Compress-Archive -Path .\Output\Binaries\Root\Binaries\x64\* -DestinationPath .\NanaZip_x64_portable.zip -CompressionLevel Optimal -Force
       - uses: actions/upload-artifact@v7.0.1
         with:
+          retention-days: 7
           name: NanaZip_x64_portable
           path: NanaZip_x64_portable.zip
       - uses: actions/upload-artifact@v7.0.1
         with:
+          retention-days: 7
           name: NanaZip_ExtensionPackage_Installer
           path: Output/NanaZip.ExtensionPackage_*.exe
       - uses: actions/upload-artifact@v7.0.1
         with:
+          retention-days: 7
           name: NanaZipSetup_x64
           path: Output/NanaZipSetup_*.exe
