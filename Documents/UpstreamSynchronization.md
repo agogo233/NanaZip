@@ -21,7 +21,7 @@
 
 ## 7-Zip ZS
 
-- NanaZip.Core: Commit 430e33f611df800852e19fb97f5a34dbd8a100c6 after
+- NanaZip.Core: Commit e49b5927101221fb7b606acb361953abda15fd86 after
   v26.02-v1.5.7-R2. The following files incorporate changes from 7-Zip ZS:
   - `Extensions\ZSCodecs\LzHandler.cpp`
   - `Extensions\ZSCodecs\ZstdDecoder.cpp`
@@ -39,7 +39,7 @@
   - `SevenZip\CPP\7zip\Archive\Zip\ZipHeader.h`
   - `SevenZip\CPP\7zip\Archive\Zip\ZipUpdate.cpp`
   - `SevenZip\CPP\7zip\Archive\SquashfsHandler.cpp`
-- NanaZip.ZS.Codecs: Commit 430e33f611df800852e19fb97f5a34dbd8a100c6 after
+- NanaZip.ZS.Codecs: Commit e49b5927101221fb7b606acb361953abda15fd86 after
   v26.02-v1.5.7-R2.
 
 ## BLAKE3
