@@ -1372,7 +1372,7 @@ namespace NanaZip::ShellExtension
             auto AddCommand =
                 [&](DWORD CommandID, UString const& Text) -> void
             {
-                if (CurrentID >= idCmdLast)
+                if (CurrentID > idCmdLast)
                 {
                     return;
                 }
