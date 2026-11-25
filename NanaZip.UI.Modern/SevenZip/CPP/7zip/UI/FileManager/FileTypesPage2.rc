@@ -1,0 +1,11 @@
+CAPTION "File Types"
+BEGIN
+  PUSHBUTTON  "Set All", IDB_FILETYPES_ALL, m, m, xc / 2 - 2, bys
+  PUSHBUTTON  "Clear All", IDB_FILETYPES_NONE, m + xc / 2 + 2, m, xc / 2 - 2, bys
+
+  CONTROL  "File types:", IDL_FILETYPES_LIST, "SysListView32",
+           LVS_REPORT | LVS_SINGLESEL | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,
+           m, m + 24, xc, yc - 24 - bys - 14
+
+  PUSHBUTTON  "Open Windows Settings app to set default apps", IDB_FILETYPES_SYSTEM, m, m + yc - bys, xc, bys
+END

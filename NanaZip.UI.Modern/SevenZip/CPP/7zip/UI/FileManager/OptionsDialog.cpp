@@ -9,6 +9,8 @@
 
 #include "EditPage.h"
 #include "EditPageRes.h"
+#include "FileTypesPage.h"
+#include "FileTypesPageRes.h"
 #include "FoldersPage.h"
 #include "FoldersPageRes.h"
 #include "MenuPage.h"
@@ -31,6 +33,7 @@ void OptionsDialog(HWND hwndOwner, HINSTANCE /* hInstance */)
   CFoldersPage foldersPage;
   CEditPage editPage;
   CSettingsPage settingsPage;
+  CFileTypesPage fileTypesPage;
 
   CObjectVector<NControl::CPageInfo> pages;
   BIG_DIALOG_SIZE(200, 200);
@@ -39,16 +42,30 @@ void OptionsDialog(HWND hwndOwner, HINSTANCE /* hInstance */)
       SIZED_DIALOG(IDD_MENU),
       SIZED_DIALOG(IDD_FOLDERS),
       SIZED_DIALOG(IDD_EDIT),
-      SIZED_DIALOG(IDD_SETTINGS)
+      SIZED_DIALOG(IDD_SETTINGS),
+      SIZED_DIALOG(IDD_FILETYPES)
   };
 
-  NControl::CPropertyPage *pagePointers[] = { &menuPage, &foldersPage, &editPage, &settingsPage };
+  // The page titles are provided by the external language file. These
+  // defaults are used while the language file has no entry for the page.
+  static const char * const kDefaultPageTitles[] =
+  {
+      "Integration"
+    , "Folders"
+    , "Editor"
+    , "Settings"
+    , "File Types"
+  };
+
+  NControl::CPropertyPage *pagePointers[] = { &menuPage, &foldersPage, &editPage, &settingsPage, &fileTypesPage };
 
   for (unsigned i = 0; i < ARRAY_SIZE(pageIDs); i++)
   {
     NControl::CPageInfo &page = pages.AddNew();
     page.ID = pageIDs[i];
     LangString_OnlyFromLangFile(page.ID, page.Title);
+    if (page.Title.IsEmpty())
+      page.Title = kDefaultPageTitles[i];
     page.Page = pagePointers[i];
   }
 

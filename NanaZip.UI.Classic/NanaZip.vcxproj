@@ -193,6 +193,7 @@
     <ClCompile Include="SevenZip\CPP\7zip\UI\FileManager\LangUtils.cpp" />
     <ClCompile Include="SevenZip\CPP\7zip\UI\FileManager\LinkDialog.cpp" />
     <ClCompile Include="SevenZip\CPP\7zip\UI\FileManager\MenuPage.cpp" />
+    <ClCompile Include="SevenZip\CPP\7zip\UI\FileManager\FileTypesPage.cpp" />
     <ClCompile Include="SevenZip\CPP\7zip\UI\FileManager\MessagesDialog.cpp" />
     <ClCompile Include="SevenZip\CPP\7zip\UI\FileManager\MyLoadMenu.cpp" />
     <ClCompile Include="SevenZip\CPP\7zip\UI\FileManager\NetFolder.cpp" />
@@ -379,6 +380,7 @@
     <ClInclude Include="SevenZip\CPP\7zip\UI\FileManager\LangUtils.h" />
     <ClInclude Include="SevenZip\CPP\7zip\UI\FileManager\LinkDialog.h" />
     <ClInclude Include="SevenZip\CPP\7zip\UI\FileManager\MenuPage.h" />
+    <ClInclude Include="SevenZip\CPP\7zip\UI\FileManager\FileTypesPage.h" />
     <ClInclude Include="SevenZip\CPP\7zip\UI\FileManager\MessagesDialog.h" />
     <ClInclude Include="SevenZip\CPP\7zip\UI\FileManager\MyCom2.h" />
     <ClInclude Include="SevenZip\CPP\7zip\UI\FileManager\MyLoadMenu.h" />

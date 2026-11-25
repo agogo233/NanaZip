@@ -1,0 +1,9 @@
+﻿// FileTypesPageRes.h
+
+#define IDD_FILETYPES     2600
+#define IDD_FILETYPES_2  12600
+
+#define IDL_FILETYPES_LIST   100
+#define IDB_FILETYPES_ALL    101
+#define IDB_FILETYPES_NONE   102
+#define IDB_FILETYPES_SYSTEM 103
