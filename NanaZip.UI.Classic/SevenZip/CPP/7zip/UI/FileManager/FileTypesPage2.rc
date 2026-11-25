@@ -1,7 +1,7 @@
 CAPTION "File Types"
 BEGIN
-  PUSHBUTTON  "Set All", IDB_FILETYPES_ALL, m, m, xc / 2 - 2, bys
-  PUSHBUTTON  "Clear All", IDB_FILETYPES_NONE, m + xc / 2 + 2, m, xc / 2 - 2, bys
+  PUSHBUTTON  "Set All", IDB_FILETYPES_ALL, m, m, 118, bys
+  PUSHBUTTON  "Clear All", IDB_FILETYPES_NONE, m + 122, m, 118, bys
 
   CONTROL  "File types:", IDL_FILETYPES_LIST, "SysListView32",
            LVS_REPORT | LVS_SINGLESEL | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,
